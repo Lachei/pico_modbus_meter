@@ -22,6 +22,9 @@
 #include "measurements.h"
 #include "crypto_storage.h"
 #include "ntp_client.h"
+#include "modbus_server_client.h"
+
+namespace fm = fronius_meter;
 
 #define TEST_TASK_PRIORITY ( tskIDLE_PRIORITY + 1UL )
 
@@ -33,16 +36,8 @@ void usb_comm_task(void *) {
     crypto_storage::Default();
 
     for (;;) {
-	handle_usb_command();
+        handle_usb_command();
     }
-}
-
-void measure_task(void *) {
-}
-
-void control_task(void *) {
-    time_us_64();
-
 }
 
 void wifi_search_task(void *) {
@@ -79,16 +74,20 @@ void startup_task(void *) {
     }
     cyw43_arch_enable_sta_mode();
     Webserver().start();
+    modbus_server_client::Default().start();
+
+    modbus_server_client::Default().fronius_server.write(50.2f, &fm::halfs_layout::hz);
+
     LogInfo("Ready, running http at {}", ip4addr_ntoa(netif_ip4_addr(netif_list)));
     LogInfo("Initialization done");
     std::cout << "Initialization done, get all further info via the commands shown in 'help'\n";
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
     TaskHandle_t task_usb_comm;
     TaskHandle_t task_update_wifi;
-    auto err = xTaskCreate(usb_comm_task, "usb_comm", configMINIMAL_STACK_SIZE / 4, NULL, 1, &task_usb_comm);	// usb task also has to be started only after cyw43 init as some wifi functions are available
+    auto err = xTaskCreate(usb_comm_task, "usb_comm", 512, NULL, 1, &task_usb_comm);	// usb task also has to be started only after cyw43 init as some wifi functions are available
     if (err != pdPASS)
         LogError("Failed to start usb communication task with code {}" ,err);
-    err = xTaskCreate(wifi_search_task, "UpdateWifiThread", configMINIMAL_STACK_SIZE / 4, NULL, 1, &task_update_wifi);
+    err = xTaskCreate(wifi_search_task, "UpdateWifiThread", 512, NULL, 1, &task_update_wifi);
     if (err != pdPASS)
         LogError("Failed to start usb communication task with code {}" ,err);
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
@@ -103,7 +102,7 @@ int main( void )
     std::cout << "Starting FreeRTOS on all cores\n";
 
     TaskHandle_t task_startup;
-    xTaskCreate(startup_task, "StartupThread", configMINIMAL_STACK_SIZE, NULL, 1, &task_startup);
+    xTaskCreate(startup_task, "StartupThread", 512, NULL, 1, &task_startup);
 
     vTaskStartScheduler();
     return 0;

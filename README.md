@@ -42,14 +42,16 @@ The default ssid and password for the access point are `pico_iot` and `12345678`
 
 ## Build instructions
 
-This project does require to have the pico_sdk installed, as well as the [Free-RTOS Kernel](https://github.com/FreeRTOS/FreeRTOS-Kernel/tree/main) downloaded
-in some folder on the machine.
+This project does require to have the pico_sdk installed (or better said downloaded), as well as the [Free-RTOS Kernel](https://github.com/FreeRTOS/FreeRTOS-Kernel/tree/main) downloaded and the [libmodbus-static library](https://github.com/Lachei/libmodbus-static) 
+downloaded in some folder on the machine.
 
 To build then simply run the following commands:
 ```bash
 mkdir build
 cd build
-cmake .. -DFREERTOS_KERNEL_PATH=<PATH_TO_DOWNLOADED_RTOS_KERNEL_FOLDER>
+
+cmake .. -DPICO_SDK_PATH=${pathtopicosdk} -DFREERTOS_KERNEL_PATH=${pathtofreertoskerneel} -DLIBMODBUS_STATIC_PATH=${pathtomodbusstatic} --fresh -DPICO_BOARD=pico2_w
+
 make -j12
 ```
 

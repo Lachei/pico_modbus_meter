@@ -7,6 +7,8 @@
 
 #include "lwip/pbuf.h"
 
+#include "http_solarapi.h"
+
 using namespace libmodbus_static;
 
 // defining the callback methods needed for lwip

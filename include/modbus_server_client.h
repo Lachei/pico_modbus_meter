@@ -14,7 +14,7 @@ struct modbus_server_client {
 		return msr;
 	}
 
-	ls::modbus_register<fronius_meter::layout> &fronius_server{ls::modbus_register<fronius_meter::layout>::Default(2)};
+	ls::modbus_register<fronius_meter::layout> &fronius_server{ls::modbus_register<fronius_meter::layout>::Default(1)};
 
 	uint16_t port{502}; // default modbus tcp port is 502
 	int tcp_poll_time_s{5};

@@ -62,6 +62,7 @@ add_executable(${PROJECT_NAME}
         src/log_storage.cpp
         src/ntp_client.cpp
         src/modbus_server_client.cpp
+        src/http_solarapi.cpp
 )
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
 target_include_directories(${PROJECT_NAME} PRIVATE

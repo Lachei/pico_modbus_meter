@@ -23,6 +23,7 @@
 #include "crypto_storage.h"
 #include "ntp_client.h"
 #include "modbus_server_client.h"
+#include "http_solarapi.h"
 
 namespace fm = fronius_meter;
 
@@ -59,6 +60,17 @@ void wifi_search_task(void *) {
     }
 }
 
+void update_meter_task(void *) {
+    LogInfo("Update meter task started");
+    for (;;) {
+        LogInfo("Trying");
+        if (wifi_storage::Default().wifi_connected) {
+            LogInfo("Updating");
+            update_meter_values(modbus_server_client::Default());
+        }
+        vTaskDelay(500);
+    }
+}
 
 // task to initailize everything and only after initialization startin all other threads
 // cyw43 init has to be done in freertos task because it utilizes freertos synchronization variables
@@ -72,11 +84,24 @@ void startup_task(void *) {
             std::cout << "failed to initialize arch (probably ram problem, increase ram size)\n";
         }
     }
+    wifi_storage::Default();
     cyw43_arch_enable_sta_mode();
     Webserver().start();
     modbus_server_client::Default().start();
 
-    modbus_server_client::Default().fronius_server.write(50.2f, &fm::halfs_layout::hz);
+    modbus_server_client::Default().fronius_server.write(230.f, &fm::halfs_layout::phv);
+    modbus_server_client::Default().fronius_server.write(230.f, &fm::halfs_layout::phvpha);
+    modbus_server_client::Default().fronius_server.write(230.f, &fm::halfs_layout::phvphb);
+    modbus_server_client::Default().fronius_server.write(230.f, &fm::halfs_layout::phvphc);
+    modbus_server_client::Default().fronius_server.write(400.f, &fm::halfs_layout::ppv);
+    modbus_server_client::Default().fronius_server.write(400.f, &fm::halfs_layout::ppvphab);
+    modbus_server_client::Default().fronius_server.write(400.f, &fm::halfs_layout::ppvphbc);
+    modbus_server_client::Default().fronius_server.write(400.f, &fm::halfs_layout::ppvphca);
+    modbus_server_client::Default().fronius_server.write(50.f, &fm::halfs_layout::hz);
+    modbus_server_client::Default().fronius_server.write(1.f, &fm::halfs_layout::pf);
+    modbus_server_client::Default().fronius_server.write(1.f, &fm::halfs_layout::pfpha);
+    modbus_server_client::Default().fronius_server.write(1.f, &fm::halfs_layout::pfphb);
+    modbus_server_client::Default().fronius_server.write(1.f, &fm::halfs_layout::pfphc);
 
     LogInfo("Ready, running http at {}", ip4addr_ntoa(netif_ip4_addr(netif_list)));
     LogInfo("Initialization done");
@@ -91,7 +116,7 @@ void startup_task(void *) {
     if (err != pdPASS)
         LogError("Failed to start usb communication task with code {}" ,err);
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
-    for (;;) vTaskDelay(1<<20);
+    update_meter_task(nullptr);
 }
 
 int main( void )

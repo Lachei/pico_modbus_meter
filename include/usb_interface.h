@@ -95,7 +95,7 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		else out << "[ERROR] severity " << level << " not allowed. Allowed values are: info|warning|error|fatal\n";
 	} else if (command == "log") {
 		print_logs();
-	} else if (command == "logs") {
+	} else if (command == "logs" || command == "l") {
 		out << "--------------------------------------\n";
 		print_logs();
 	} else if (command == "s") {

@@ -70,7 +70,6 @@ err_t modbus_server_client::stop() {
 err_t tcp_server_accept (void *arg, struct tcp_pcb *client_pcb, err_t err) {
 	if (err != ERR_OK || client_pcb == NULL || arg == NULL) {
 		LogError("Failure in accept");
-		tcp_server_result(arg, err, nullptr);
 		return ERR_VAL;
 	}
 
@@ -131,7 +130,6 @@ err_t tcp_server_sent(void *arg, struct tcp_pcb *tpcb, u16_t len) {
 
 err_t tcp_server_poll(void *arg, struct tcp_pcb *tpcb) {
 	// remove connections that are not anymore valid
-	LogInfo("tcp_server_poll_fn");
 	return tcp_server_result(arg, -1, tpcb); // on no response remove the client to free up space
 }
 

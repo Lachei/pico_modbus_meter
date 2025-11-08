@@ -28,7 +28,7 @@ err_t tcp_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
 err_t tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len);
 err_t tcp_connect_cb(void *arg, struct tcp_pcb *tpcb, err_t err);
 err_t send_request();
-void tcp_client_close();
+err_t tcp_client_close();
 
 void update_meter_values(modbus_server_client &m) {
 	LogInfo("Entering update meter vals, {}ms", time_us_64() / 1000);
@@ -56,9 +56,17 @@ void update_meter_values(modbus_server_client &m) {
 		send_request();
 	cyw43_arch_lwip_end();
 
-	LogInfo("take");
 	ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(500));
 	LogInfo("Quitting update meter vals, {}ms", time_us_64() / 1000);
+}
+
+void wake_up_update_task() {
+	if (!task_handle)
+		return;
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+	vTaskNotifyGiveFromISR(task_handle, &xHigherPriorityTaskWoken);
+	task_handle = nullptr;
+	portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
 }
 
 err_t send_request() {
@@ -88,7 +96,8 @@ err_t tcp_connect_cb(void *arg, struct tcp_pcb *tpcb, err_t err) {
 
 void tcp_err_cb(void *arg, err_t err) {
 	LogError("Error: {}", err);
-	tcp_client_close();
+	if (err != ERR_ABRT)
+		tcp_client_close();
 }
 #define TRY_EXTRACT(key, variable) if (cur.find(key) != std::string_view::npos && modbus) modbus->fronius_server.write(extract_val(cur), &fronius_meter::halfs_layout::variable)
 #define TRY_EXTRACTE(key, variable) else if (cur.find(key) != std::string_view::npos && modbus) modbus->fronius_server.write(extract_val(cur), &fronius_meter::halfs_layout::variable)
@@ -104,8 +113,7 @@ err_t tcp_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
 		LogInfo("Done with a frame");
 		storage.clear();
 		open_bracket_count = 0;
-		tcp_client_close();
-		return 0;
+		return tcp_client_close();
 	}
 
 	bool finished{};
@@ -157,8 +165,7 @@ err_t tcp_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
 		storage.clear();
 		open_bracket_count = 0;
 		LogInfo("########  Updated meter values ##########");
-		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-		vTaskNotifyGiveFromISR(task_handle, &xHigherPriorityTaskWoken);
+		wake_up_update_task();
 	}
 
 	return 0;
@@ -170,16 +177,23 @@ err_t tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len) {
 	return 0;
 }
 
-void tcp_client_close() { 
+err_t tcp_client_close() { 
+	err_t err = ERR_OK;
 	if (client_pcb) {
 		tcp_arg(client_pcb, NULL);
 		tcp_poll(client_pcb, NULL, 0);
 		tcp_sent(client_pcb, NULL);
 		tcp_recv(client_pcb, NULL);
 		tcp_err(client_pcb, NULL);
-		tcp_close(client_pcb); 
+		if (tcp_close(client_pcb) != ERR_OK) {
+			LogError("Close failed on pcb, calling abort");
+			tcp_abort(client_pcb);
+			err = ERR_ABRT;
+		}
 		client_pcb = {};
 		connected = false;
 	}; 
+	wake_up_update_task();
+	return err;
 }
 

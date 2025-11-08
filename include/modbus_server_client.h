@@ -17,7 +17,7 @@ struct modbus_server_client {
 	ls::modbus_register<fronius_meter::layout> &fronius_server{ls::modbus_register<fronius_meter::layout>::Default(1)};
 
 	uint16_t port{502}; // default modbus tcp port is 502
-	int tcp_poll_time_s{5};
+	int tcp_poll_time_s{30};
 	struct tcp_pcb *tcp_pcb{};
 
 	/** @brief Starts the lwip tcp server on specified port */

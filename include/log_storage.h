@@ -4,7 +4,7 @@
 #include <iostream>
 #include "static_types.h"
 
-constexpr int MAX_LOGS{64}; // with 128 the output buffer gets overfull, maybe solve by flush inbetween
+constexpr int MAX_LOGS{512}; // with 128 the output buffer gets overfull, maybe solve by flush inbetween
 constexpr int MAX_LOG_LENGTH{64};
 
 enum struct log_severity {

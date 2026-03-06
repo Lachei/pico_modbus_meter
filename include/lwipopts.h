@@ -14,14 +14,14 @@
 #endif
 #define MEM_ALIGNMENT               4
 #ifndef MAX_CONCURRENT_CX_HINT
-#define MAX_CONCURRENT_CX_HINT      6
+#define MAX_CONCURRENT_CX_HINT	    12 
 #endif
 #ifndef MEM_SIZE
 #define MEM_SIZE                    (MAX_CONCURRENT_CX_HINT * TCP_MSS)
 #endif
-#define MEMP_NUM_TCP_SEG            32
+#define MEMP_NUM_TCP_SEG            64
 #define MEMP_NUM_ARP_QUEUE          10
-#define PBUF_POOL_SIZE              24
+#define PBUF_POOL_SIZE              32
 #define LWIP_ARP                    1
 #define LWIP_ETHERNET               1
 #define LWIP_ICMP                   1

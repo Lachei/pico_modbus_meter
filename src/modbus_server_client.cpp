@@ -11,6 +11,8 @@
 
 using namespace libmodbus_static;
 
+uint16_t bs(uint16_t v) {return v >> 8 | ((v & 0xff) << 8);}
+
 // defining the callback methods needed for lwip
 err_t tcp_server_accept (void *arg, struct tcp_pcb *client_pcb, err_t err);
 err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
@@ -103,7 +105,7 @@ err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err
 				LogError("Modbus parsing failed with {}", r);
 				continue;
 			}
-			LogInfo("Got request for addr {:x} length{:x}", server.fronius_server.lc.i1, server.fronius_server.lc.i2);
+			LogError("Got request for addr {} length {}", bs(server.fronius_server.lc.i1), bs(server.fronius_server.lc.i2));
 			auto [res, err] = server.fronius_server.get_frame_response();
 			if (err != OK) {
 				LogError("Modbus generating response failed with {}", err);

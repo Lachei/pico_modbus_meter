@@ -63,11 +63,8 @@ void wifi_search_task(void *) {
 void update_meter_task(void *) {
     LogInfo("Update meter task started");
     for (;;) {
-        LogInfo("Trying");
-        if (wifi_storage::Default().wifi_connected) {
-            LogInfo("Updating");
+        if (wifi_storage::Default().wifi_connected)
             update_meter_values(modbus_server_client::Default());
-        }
         vTaskDelay(500);
     }
 }

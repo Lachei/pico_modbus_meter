@@ -56,7 +56,14 @@ void update_meter_values(modbus_server_client &m) {
 		send_request();
 	cyw43_arch_lwip_end();
 
-	ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(500));
+	uint32_t count = ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(4000));
+	if (count == 0) { // avoid notifying the task if we ran into a timeout
+		LogInfo("Ran into wait timeout");
+		task_handle = nullptr;
+		cyw43_arch_lwip_begin();
+		tcp_client_close();
+		cyw43_arch_lwip_end();
+	}
 	LogInfo("Quitting update meter vals, {}ms", time_us_64() / 1000);
 }
 
@@ -163,6 +170,23 @@ err_t tcp_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
 			++i;
 		}
 		storage.clear();
+		// calculate corerct per phase values
+		float wh_exp = modbus->fronius_server.read(&fronius_meter::halfs_layout::totwhexp);
+		float wh_imp = modbus->fronius_server.read(&fronius_meter::halfs_layout::totwhimp);
+		modbus->fronius_server.write(wh_exp / 3.f, &fronius_meter::halfs_layout::totwhexppha);
+		modbus->fronius_server.write(wh_exp / 3.f, &fronius_meter::halfs_layout::totwhexpphb);
+		modbus->fronius_server.write(wh_exp / 3.f, &fronius_meter::halfs_layout::totwhexpphc);
+		modbus->fronius_server.write(wh_imp / 3.f, &fronius_meter::halfs_layout::totwhimppha);
+		modbus->fronius_server.write(wh_imp / 3.f, &fronius_meter::halfs_layout::totwhimpphb);
+		modbus->fronius_server.write(wh_imp / 3.f, &fronius_meter::halfs_layout::totwhimpphc);
+		modbus->fronius_server.write(wh_exp, &fronius_meter::halfs_layout::totvahexp);
+		modbus->fronius_server.write(wh_exp / 3.f, &fronius_meter::halfs_layout::totvahexppha);
+		modbus->fronius_server.write(wh_exp / 3.f, &fronius_meter::halfs_layout::totvahexpphb);
+		modbus->fronius_server.write(wh_exp / 3.f, &fronius_meter::halfs_layout::totvahexpphc);
+		modbus->fronius_server.write(wh_imp, &fronius_meter::halfs_layout::totvahimp);
+		modbus->fronius_server.write(wh_imp / 3.f, &fronius_meter::halfs_layout::totvahimppha);
+		modbus->fronius_server.write(wh_imp / 3.f, &fronius_meter::halfs_layout::totvahimpphb);
+		modbus->fronius_server.write(wh_imp / 3.f, &fronius_meter::halfs_layout::totvahimpphc);
 		open_bracket_count = 0;
 		LogInfo("########  Updated meter values ##########");
 		wake_up_update_task();

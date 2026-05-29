@@ -80,7 +80,7 @@ err_t send_request() {
 	LogInfo("Sending request");
 	constexpr std::string_view frame = "GET /solar_api/v1/GetMeterRealtimeData.cgi HTTP/1.0\r\nHost: lachei_request.com\r\nAccept: */*\r\n\r\n ";
 
-	err_t error = tcp_write(client_pcb, frame.data(), frame.size(), TCP_WRITE_FLAG_COPY);
+	err_t error = tcp_write(client_pcb, frame.data(), frame.size(), 0);
 
 	if (error) {
 		LogError("ERROR: Code: {} (tcp_send_packet :: tcp_write)", error);
@@ -106,8 +106,8 @@ void tcp_err_cb(void *arg, err_t err) {
 	if (err != ERR_ABRT)
 		tcp_client_close();
 }
-#define TRY_EXTRACT(key, variable) if (cur.find(key) != std::string_view::npos && modbus) modbus->fronius_server.write(extract_val(cur), &fronius_meter::halfs_layout::variable)
-#define TRY_EXTRACTE(key, variable) else if (cur.find(key) != std::string_view::npos && modbus) modbus->fronius_server.write(extract_val(cur), &fronius_meter::halfs_layout::variable)
+#define TRY_EXTRACT(key, variable) if (cur.find(key) != std::string_view::npos && modbus) modbus->fronius_server.write(extract_val(cur), &halfs_sunspec::variable)
+#define TRY_EXTRACTE(key, variable) else if (cur.find(key) != std::string_view::npos && modbus) modbus->fronius_server.write(extract_val(cur), &halfs_sunspec::variable)
 float extract_val(std::string_view line) {
 	size_t p = line.find(':');
 	if (p == std::string_view::npos)
@@ -171,22 +171,22 @@ err_t tcp_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
 		}
 		storage.clear();
 		// calculate corerct per phase values
-		float wh_exp = modbus->fronius_server.read(&fronius_meter::halfs_layout::totwhexp);
-		float wh_imp = modbus->fronius_server.read(&fronius_meter::halfs_layout::totwhimp);
-		modbus->fronius_server.write(wh_exp / 3.f, &fronius_meter::halfs_layout::totwhexppha);
-		modbus->fronius_server.write(wh_exp / 3.f, &fronius_meter::halfs_layout::totwhexpphb);
-		modbus->fronius_server.write(wh_exp / 3.f, &fronius_meter::halfs_layout::totwhexpphc);
-		modbus->fronius_server.write(wh_imp / 3.f, &fronius_meter::halfs_layout::totwhimppha);
-		modbus->fronius_server.write(wh_imp / 3.f, &fronius_meter::halfs_layout::totwhimpphb);
-		modbus->fronius_server.write(wh_imp / 3.f, &fronius_meter::halfs_layout::totwhimpphc);
-		modbus->fronius_server.write(wh_exp, &fronius_meter::halfs_layout::totvahexp);
-		modbus->fronius_server.write(wh_exp / 3.f, &fronius_meter::halfs_layout::totvahexppha);
-		modbus->fronius_server.write(wh_exp / 3.f, &fronius_meter::halfs_layout::totvahexpphb);
-		modbus->fronius_server.write(wh_exp / 3.f, &fronius_meter::halfs_layout::totvahexpphc);
-		modbus->fronius_server.write(wh_imp, &fronius_meter::halfs_layout::totvahimp);
-		modbus->fronius_server.write(wh_imp / 3.f, &fronius_meter::halfs_layout::totvahimppha);
-		modbus->fronius_server.write(wh_imp / 3.f, &fronius_meter::halfs_layout::totvahimpphb);
-		modbus->fronius_server.write(wh_imp / 3.f, &fronius_meter::halfs_layout::totvahimpphc);
+		float wh_exp = modbus->fronius_server.read(&halfs_sunspec::totwhexp);
+		float wh_imp = modbus->fronius_server.read(&halfs_sunspec::totwhimp);
+		modbus->fronius_server.write(wh_exp / 3.f, &halfs_sunspec::totwhexppha);
+		modbus->fronius_server.write(wh_exp / 3.f, &halfs_sunspec::totwhexpphb);
+		modbus->fronius_server.write(wh_exp / 3.f, &halfs_sunspec::totwhexpphc);
+		modbus->fronius_server.write(wh_imp / 3.f, &halfs_sunspec::totwhimppha);
+		modbus->fronius_server.write(wh_imp / 3.f, &halfs_sunspec::totwhimpphb);
+		modbus->fronius_server.write(wh_imp / 3.f, &halfs_sunspec::totwhimpphc);
+		modbus->fronius_server.write(wh_exp, &halfs_sunspec::totvahexp);
+		modbus->fronius_server.write(wh_exp / 3.f, &halfs_sunspec::totvahexppha);
+		modbus->fronius_server.write(wh_exp / 3.f, &halfs_sunspec::totvahexpphb);
+		modbus->fronius_server.write(wh_exp / 3.f, &halfs_sunspec::totvahexpphc);
+		modbus->fronius_server.write(wh_imp, &halfs_sunspec::totvahimp);
+		modbus->fronius_server.write(wh_imp / 3.f, &halfs_sunspec::totvahimppha);
+		modbus->fronius_server.write(wh_imp / 3.f, &halfs_sunspec::totvahimpphb);
+		modbus->fronius_server.write(wh_imp / 3.f, &halfs_sunspec::totvahimpphc);
 		open_bracket_count = 0;
 		LogInfo("########  Updated meter values ##########");
 		wake_up_update_task();

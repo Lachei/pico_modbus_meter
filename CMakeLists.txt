@@ -61,10 +61,10 @@ add_executable(${PROJECT_NAME}
         src/dnsserver.c
         src/log_storage.cpp
         src/ntp_client.cpp
-        src/modbus_server_client.cpp
-        src/http_solarapi.cpp
+	src/sunspec_modbus.cpp
 )
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
+set_property(TARGET ${PROJECT_NAME} APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--print-memory-usage")
 target_include_directories(${PROJECT_NAME} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/modbus_layouts

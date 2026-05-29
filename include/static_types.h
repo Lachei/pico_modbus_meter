@@ -56,6 +56,7 @@ struct static_string {
 
 template<typename T, int N>
 struct static_vector {
+	using value_type = T;
 	std::array<T, N> storage{};
 	int cur_size{};
 	constexpr T* begin() { return storage.begin(); }
@@ -71,6 +72,10 @@ struct static_vector {
 	constexpr bool empty() const { return cur_size == 0; }
 	constexpr int size() const { return cur_size; }
 	constexpr void sanitize() { if (cur_size > N || cur_size < 0) cur_size = 0; }
+	constexpr T* back() { return begin() + std::max(0, cur_size - 1); }
+	constexpr T* pop() { T* t = back(); if (cur_size) --cur_size; return t; }
+	constexpr std::span<T> span() { return {storage.data(), uint32_t(cur_size)}; }
+	constexpr T& operator[](int i) { if (i < cur_size) return storage[i]; return storage[0]; }
 };
 
 template<typename T, int N>

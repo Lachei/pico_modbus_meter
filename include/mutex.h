@@ -1,5 +1,6 @@
 #pragma once
 
+#include "FreeRTOS.h"
 #include "semphr.h"
 
 #include "log_storage.h"
@@ -13,6 +14,8 @@ struct mutex {
 			vSemaphoreDelete(handle);
 		}
 	}
+	constexpr void lock() { xSemaphoreTake(handle, portMAX_DELAY); };
+	constexpr void unlock() { xSemaphoreGive(handle); };
 };
 
 struct scoped_lock {

@@ -6,6 +6,8 @@
 #include "static_types.h"
 #include "persistent_storage.h"
 #include "ranges_util.h"
+#include "lwip_init.h"
+#include "lwip/dhcp.h"
 
 struct wifi_storage {
 	static constexpr uint32_t DISCOVER_TIMEOUT_US = 6e6; // 6 seconds
@@ -40,7 +42,9 @@ struct wifi_storage {
 
 		LogInfo("Hostname change detected, adopting hostname");
 		lwip_lock();
-		struct netif* nif = &cyw43_state.netif[CYW43_ITF_STA];
+		struct netif* nif = get_netif();
+		if (!nif)
+			return;
 		if (hostname_inited)
 			dhcp_stop(nif);
 		netif_set_hostname(nif, hostname.data());
@@ -49,17 +53,19 @@ struct wifi_storage {
 		lwip_unlock();
 		if (!hostname_inited) {
 			mdns_resp_init(); 
-			mdns_resp_add_netif(&cyw43_state.netif[CYW43_ITF_STA], hostname.data());
-			mdns_resp_add_service(&cyw43_state.netif[CYW43_ITF_STA], mdns_service_name.data(), "_http", DNSSD_PROTO_TCP, 80, _mdns_response_callback, NULL);
+			mdns_resp_add_netif(nif, hostname.data());
+			mdns_resp_add_service(nif, mdns_service_name.data(), "_http", DNSSD_PROTO_TCP, 80, _mdns_response_callback, NULL);
 		} else {
-			mdns_resp_rename_netif(&cyw43_state.netif[CYW43_ITF_STA], hostname.data());
+			mdns_resp_rename_netif(nif, hostname.data());
 		}
 		
+		LogInfo("Setting change to false");
 		hostname_inited = true;
 		hostname_changed = false;
 	}
 
 	void update_wifi_connection() {
+#if CYW43_LWIP
 		wifi_connected = CYW43_LINK_UP == cyw43_tcpip_link_status(&cyw43_state, CYW43_ITF_STA);
 		bool wifi_available = wifis | contains{ssid_wifi.sv(), [](const wifi_info &w) { return w.ssid.sv(); }};
 		if (!wifi_changed || ssid_wifi.cur_size == 0 || pwd_wifi.cur_size < 8 || !wifi_available)
@@ -78,9 +84,13 @@ struct wifi_storage {
 		}
 
 		wifi_changed = false;
+#else
+		wifi_connected = true; // for wired connections we are always connected
+#endif
 	}
 	
 	void update_scanned() {
+#if CYW43_LWIP
 		uint32_t cur = time_us_64() / 1000000;
 		if (cyw43_wifi_scan_active(&cyw43_state) && last_scanned - cur < 10) // after 10 seconds forces rediscover
 			return;
@@ -95,6 +105,7 @@ struct wifi_storage {
 		// remove old wifis
 		uint64_t cur_us = time_us_64();
 		wifis.remove_if([cur_us](const auto &e){ return cur_us - e.last_seen_us > DISCOVER_TIMEOUT_US; });
+#endif
 	}
 
 	void write_to_persistent_storage() {
@@ -123,6 +134,8 @@ struct wifi_storage {
 		LogInfo("Loaded pwd siz: {}", pwd_wifi.size());
 	}
 
+
+#if CYW43_LWIP
 	/*INTERNAL*/ static int _scan_result(void *, const cyw43_ev_scan_result_t *result) {
 		if (!result || result->ssid_len == 0)
 			return 0;
@@ -148,6 +161,7 @@ struct wifi_storage {
 		wifi->last_seen_us = time_us_64();
 		return 0;
 	}
+#endif
 	/*INTERNAL*/ static void _mdns_response_callback(struct mdns_service *service, void*)
 	{
 		err_t res = mdns_resp_add_service_txtitem(service, "path=/", 6);

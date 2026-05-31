@@ -482,7 +482,7 @@ err_t tcp_server template_args_pure::send_data(std::string_view data, struct tcp
 		if (err != ERR_OK) {
 			LogWarning("Failed to write data {}, retries left {}", err, retry);
 			if (--retry > 0) {
-				cyw43_arch_wait_for_work_until(make_timeout_time_ms(50));
+        			vTaskDelay(pdMS_TO_TICKS(10));
 				continue;
 			}
 			return tcp_server_internal::tcp_server_result template_args_pure(this, -1, client);

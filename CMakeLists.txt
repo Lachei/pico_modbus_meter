@@ -20,11 +20,26 @@ if (NOT PICO_BOARD)
         set(PICO_BOARD pico_w)
 endif()
 
+if (${PICO_BOARD} STREQUAL "wiznet_pico")
+	message("wiznet board selected, setting board to pico + enable wiznet")
+	set(PICO_BOARD pico)
+	set(WIZNET_CHIP W5100S)
+	add_definitions(-DLWIP_PROVIDE_ERRNO)
+	add_definitions(-DWIZNET_LWIP)
+	add_definitions(-D_WIZCHIP_=W5100S)
+	add_definitions(-DDEVICE_BOARD_NAME=WIZnet_Ethernet_HAT)
+	add_definitions(-DPICO_LWIP_CUSTOM_LOCK_TCPIP_CORE=0)
+	set(BOARD_LINKS LWIP_FILES IOLIBRARY_FILES ETHERNET_FILES)
+else()
+	set(BOARD_LINKS pico_cyw43_arch_lwip_sys_freertos)
+endif()
+
 include(pico_sdk_import.cmake)
 include(pico_extras_import_optional.cmake)
 include(FreeRTOS_Kernel_import.cmake)
 include(cmake/html_pages_library.cmake)
 add_subdirectory(${LIBMODBUS_STATIC_PATH} libmodbus-static)
+add_subdirectory(wiznet)
 
 add_compile_options(-Wall)
 
@@ -33,11 +48,6 @@ project(modbus-meter C CXX)
 pico_sdk_init()
 
 set(CMAKE_BUILD_TYPE "MinSizeRel")
-
-if (NOT PICO_CYW43_SUPPORTED)
-        message(FATAL_ERROR "Pico w not supported by your sdk. Make sure to have PICO_CYW43_SUPPORTED set by your sdk installation")
-endif()
-
 
 # ----------------------------------------------------------------------------
 # Website content
@@ -73,8 +83,11 @@ target_link_libraries(${PROJECT_NAME}
         pico_stdlib
         pico_mbedtls
         hardware_flash
-        pico_cyw43_arch_lwip_sys_freertos
+	${BOARD_LINKS}
+	pico_lwip_core
+	pico_lwip_contrib_freertos
         pico_lwip_mdns
+        pico_lwip_core4
         FreeRTOS-Kernel-Heap4 # FreeRTOS kernel and dynamic heap
         ${PROJECT_NAME}-html
         libmodbus-static

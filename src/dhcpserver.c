@@ -32,9 +32,9 @@
 #include <string.h>
 #include <errno.h>
 
-#include "cyw43_config.h"
 #include "dhcpserver/dhcpserver.h"
 #include "lwip/udp.h"
+#include "hardware/timer.h"
 
 #define DHCPDISCOVER    (1)
 #define DHCPOFFER       (2)
@@ -67,6 +67,10 @@
 
 #define MAC_LEN (6)
 #define MAKE_IP4(a, b, c, d) ((a) << 24 | (b) << 16 | (c) << 8 | (d))
+
+static uint64_t hal_ticks_ms() {
+	return time_us_64() / 1000;
+}
 
 typedef struct {
     uint8_t op; // message opcode
@@ -227,7 +231,7 @@ static void dhcp_server_process(void *arg, struct udp_pcb *upcb, struct pbuf *p,
                         yi = i;
                     }
                     uint32_t expiry = d->lease[i].expiry << 16 | 0xffff;
-                    if ((int32_t)(expiry - cyw43_hal_ticks_ms()) < 0) {
+                    if ((int32_t)(expiry - hal_ticks_ms()) < 0) {
                         // IP expired, reuse it
                         memset(d->lease[i].mac, 0, MAC_LEN);
                         yi = i;
@@ -268,7 +272,7 @@ static void dhcp_server_process(void *arg, struct udp_pcb *upcb, struct pbuf *p,
                 // Should be NACK
                 goto ignore_request;
             }
-            d->lease[yi].expiry = (cyw43_hal_ticks_ms() + DEFAULT_LEASE_TIME_S * 1000) >> 16;
+            d->lease[yi].expiry = (hal_ticks_ms() + DEFAULT_LEASE_TIME_S * 1000) >> 16;
             dhcp_msg.yiaddr[3] = DHCPS_BASE_IP + yi;
             opt_write_u8(&opt, DHCP_OPT_MSG_TYPE, DHCPACK);
             printf("DHCPS: client connected: MAC=%02x:%02x:%02x:%02x:%02x:%02x IP=%u.%u.%u.%u\n",

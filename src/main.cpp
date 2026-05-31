@@ -25,51 +25,46 @@
 #include "sunspec_modbus.h"
 #include "lwip_init.h"
 
-#define TEST_TASK_PRIORITY ( tskIDLE_PRIORITY + 1UL )
-
-constexpr UBaseType_t STANDARD_TASK_PRIORITY = tskIDLE_PRIORITY + 1ul;
-constexpr UBaseType_t CONTROL_TASK_PRIORITY = tskIDLE_PRIORITY + 10ul;
-
 inline uint32_t time_s() { return time_us_64() / 1000000;  }
 
 void usb_comm_task(void *) {
-    LogInfo("Usb communication task");
-    crypto_storage::Default();
+	LogInfo("Usb communication task");
+	crypto_storage::Default();
 
-    for (;;) {
-        handle_usb_command();
-    }
+	for (;;) {
+		handle_usb_command();
+	}
 }
 
 void wifi_search_task(void *) {
-    LogInfo("Wifi task started");
-    if (wifi_storage::Default().ssid_wifi.empty()) // onyl start the access point by default if no normal wifi connection is set
-        access_point::Default().init();
+	LogInfo("Wifi task started");
+	if (wifi_storage::Default().ssid_wifi.empty()) // onyl start the access point by default if no normal wifi connection is set
+		access_point::Default().init();
 
-    constexpr uint32_t ap_timeout = 10;
-    uint32_t cur_time = time_s();
-    uint32_t last_conn = cur_time;
+	constexpr uint32_t ap_timeout = 10;
+	uint32_t cur_time = time_s();
+	uint32_t last_conn = cur_time;
 
-    for (;;) {
-        cur_time = time_s();
-        uint32_t dt = cur_time - last_conn;
-        wifi_storage::Default().update_hostname();
-        wifi_storage::Default().update_wifi_connection();
-        if (wifi_storage::Default().wifi_connected)
-            last_conn = cur_time;
-        if (dt % 30 == 5) // every 30 seconds enable reconnect try
-            wifi_storage::Default().wifi_changed = true;
-        if (dt > ap_timeout) {
-            access_point::Default().init();
-            board_led_set(cur_time & 1);
-        } else {
-            board_led_set(wifi_storage::Default().wifi_connected);
-        }
-        wifi_storage::Default().update_scanned();
-        if (wifi_storage::Default().wifi_connected)
-            ntp_client::Default().update_time();
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
+	for (;;) {
+		cur_time = time_s();
+		uint32_t dt = cur_time - last_conn;
+		wifi_storage::Default().update_hostname();
+		wifi_storage::Default().update_wifi_connection();
+		if (wifi_storage::Default().wifi_connected)
+			last_conn = cur_time;
+		if (dt % 30 == 5) // every 30 seconds enable reconnect try
+			wifi_storage::Default().wifi_changed = true;
+		if (dt > ap_timeout) {
+			access_point::Default().init();
+			board_led_set(cur_time & 1);
+		} else {
+			board_led_set(wifi_storage::Default().wifi_connected);
+		}
+		wifi_storage::Default().update_scanned();
+		if (wifi_storage::Default().wifi_connected)
+			ntp_client::Default().update_time();
+		vTaskDelay(pdMS_TO_TICKS(1000));
+	}
 }
 
 void update_meter_task(void *) {
@@ -118,50 +113,41 @@ void update_meter_task(void *) {
 			s.write(e.read(&halfs_eastron::import_active_energy) * 1e3f, 	&halfs_sunspec::totwhimp);
 			s.write(e.read(&halfs_eastron::export_active_energy) * 1e3f, 	&halfs_sunspec::totwhexp);
 		}
-		
+
 		// wait remaining 250ms for next iteration
 		int ms_e = time_us_64() / 1000;
 		vTaskDelay(pdMS_TO_TICKS(std::max(0, 250 - (ms_e - ms_s))));
 	}
 }
 
-void sunspec_meter_task(void *) {
-	LogInfo("Sunspec meter task started");
-	for (;;) {
-		ls::result state = g::sunspec_modbus().poll_update_state(ls::ms(4000));
-		if (state != ls::IN_PROGRESS || state != ls::OK)
-			LogError("modbus meter error: {}", state);
-	}
-}
-
 // task to initailize everything and only after initialization startin all other threads
 // cyw43 init has to be done in freertos task because it utilizes freertos synchronization variables
 void startup_task(void *) {
-    LogInfo("Starting initialization");
-    std::cout << "Starting initialization\n";
-    lwip_init();
-    wifi_storage::Default().update_hostname();
-    Webserver().start();
+	LogInfo("Starting initialization");
+	std::cout << "Starting initialization\n";
+	get_netif();
+	lwip_init();
+	wifi_storage::Default().update_hostname();
+	Webserver().start();
+	LogInfo("Initialization done");
 
-    LogInfo("Ready, running http at {}", ip4addr_ntoa(netif_ip4_addr(netif_list)));
-    LogInfo("Initialization done");
-    std::cout << "Initialization done, get all further info via the commands shown in 'help'\n";
-    board_led_set(ON);
-    xTaskCreate(usb_comm_task, "usb_comm", 512, NULL, 1, NULL);	// usb task also has to be started only after cyw43 init as some wifi functions are available
-    xTaskCreate(wifi_search_task, "UpdateWifiThread", 512, NULL, 1, NULL);
-    board_led_set(OFF);
-    update_meter_task(nullptr);
+	std::cout << "Initialization done, get all further info via the commands shown in 'help'\n";
+	board_led_set(ON);
+	xTaskCreate(usb_comm_task, "usb_comm", 512, NULL, 1, NULL);	// usb task also has to be started only after cyw43 init as some wifi functions are available
+	xTaskCreate(wifi_search_task, "UpdateWifiThread", 512, NULL, 1, NULL);
+	board_led_set(OFF);
+	update_meter_task(nullptr);
 }
 
 int main( void )
 {
-    stdio_init_all();
+	stdio_init_all();
 
-    LogInfo("Starting FreeRTOS on all cores.");
-    std::cout << "Starting FreeRTOS on all cores\n";
+	LogInfo("Starting FreeRTOS on all cores.");
+	std::cout << "Starting FreeRTOS on all cores\n";
 
-    xTaskCreate(startup_task, "StartupThread", 512, NULL, 1, NULL);
+	xTaskCreate(startup_task, "StartupThread", 512, NULL, 1, NULL);
 
-    vTaskStartScheduler();
-    return 0;
+	vTaskStartScheduler();
+	return 0;
 }

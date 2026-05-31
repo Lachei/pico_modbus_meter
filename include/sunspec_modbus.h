@@ -109,8 +109,7 @@ inline mutex& sunspec_mutex() {
 	return m;
 }
 inline ls::modbus_actor<sunspec_layout, tcp_io>& sunspec_modbus() {
-	static ls::modbus_actor<sunspec_layout, tcp_io> sunspec{0, sunspec_layout{}, tcp_io{}, 
-		[]{ g::sunspec_mutex().lock(); }, []{ g::sunspec_mutex().unlock(); } };
+	static ls::modbus_actor<sunspec_layout, tcp_io> sunspec{0, []{ g::sunspec_mutex().lock(); }, []{ g::sunspec_mutex().unlock(); } };
 	return sunspec;
 }
 }

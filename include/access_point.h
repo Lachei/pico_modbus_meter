@@ -1,7 +1,9 @@
 #pragma once
 
 #include <string_view>
+#if CYW43_LWIP
 #include "pico/cyw43_arch.h"
+#endif
 extern "C" {
 #include "dhcpserver/dhcpserver.h"
 #include "dnsserver/dnsserver.h"
@@ -27,6 +29,7 @@ struct access_point {
 	ip4_addr_t _ip{};		// ip address of this device
 	ip4_addr_t _mask{};		// ip mask
 
+#if CYW43_LWIP
 	void init() {
 		if (active)
 			return;
@@ -51,5 +54,10 @@ struct access_point {
 		cyw43_arch_disable_ap_mode();
 		active = false;
 	}
+#else
+	// no ops for non wifi devices
+	void init() {}
+	void deinit() {}
+#endif
 };
 

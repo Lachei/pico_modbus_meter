@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <span>
+#include <cstring>
 
 #include "pico/flash.h"
 #include "pico/stdlib.h"

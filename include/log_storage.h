@@ -4,7 +4,7 @@
 #include <iostream>
 #include "static_types.h"
 
-constexpr int MAX_LOGS{512};
+constexpr int MAX_LOGS{128};
 constexpr int MAX_LOG_LENGTH{64};
 
 enum struct log_severity {
@@ -27,10 +27,13 @@ struct log_storage {
 
 	static_ring_buffer<log_entry, MAX_LOGS> logs{};
 	log_severity cur_severity{log_severity::Info};
+	bool print_to_cout{false};
 	
 	constexpr log_entry* push(log_severity severity, std::string_view static_message = {}) noexcept {
 		if (severity < cur_severity)
 			return {};
+		if (print_to_cout)
+			std::cout << static_message << std::endl;
 		log_entry *entry = logs.push();
 		if (!entry)
 			return {};

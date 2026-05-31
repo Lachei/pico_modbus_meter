@@ -49,7 +49,7 @@ struct rtu_io {
 
 namespace g {
 inline ls::modbus_actor<eastron_layout, rtu_io>& eastron_modbus() {
-	static ls::modbus_actor<eastron_layout, rtu_io> eastron{0, eastron_layout{}, rtu_io{}};
+	static ls::modbus_actor<eastron_layout, rtu_io> eastron{0};
 	return eastron;
 }
 }

@@ -36,6 +36,7 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		out << "      Variable1\n";
 		out << "      Variable2\n";
 		out << "      Variable3\n\n";
+#if CYW43_LWIP
 		out << "  enable_wifi|ew\n";
 		out << "    Activate wifi on the device\n\n";
 		out << "  disable_wifi|dw\n";
@@ -46,6 +47,7 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		out << "    Disable the acces point on the device (leafs the other wifi untouched)\n\n";
 		out << "  connect_wifi ${ssid} ${password}|cw\n";
 		out << "    Store the wifi credentials for a certain ssid and connect if its available\n\n";
+#endif
 		out << "  set_log_level (info|warning|error|fatal)|sll\n";
 		out << "    Set the log level to the specified value\n\n";;
 		out << "  log|l\n";
@@ -54,6 +56,8 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		out << "    Print the log storage with a separator line to the console\n\n";
 		out << "  s\n";
 		out << "    Print a separator line with dashes\n\n";
+		out << "  follow|f\n";
+		out << "    Toggle following the logs\n";
 	} else if (command == "status") {
 		out << "measurements:\n";
 		out << "-------------\n";
@@ -70,6 +74,7 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		if (!in)
 			out << "Error at setting the value\n";
 		in.clear();
+#if CYW43_LWIP
 	} else if (command == "enable_wifi" || command == "ew") {
 		cyw43_arch_enable_sta_mode();
 	} else if (command == "disable_wifi" || command == "dw") {
@@ -91,6 +96,7 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		if (PICO_OK != persistent_storage_t::Default().write(
 			wifi_storage::Default().pwd_wifi, &persistent_storage_layout::pwd_wifi))
 			LogError("Failed to store pwd_wifi");
+#endif
 	} else if (command == "set_log_level" || command == "sll") {
 		std::string level;
 		in >> level;
@@ -106,6 +112,8 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		print_logs();
 	} else if (command == "s") {
 		out << "--------------------------------------\n";
+	} else if (command == "follow" || command == "f") {
+		log_storage::Default().print_to_cout ^= 1;
 	} else {
 		out << "[ERROR] Command " << command << " unknown. Run command 'help' for a list of all available commands\n";
 	}

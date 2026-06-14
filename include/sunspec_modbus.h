@@ -69,6 +69,7 @@ struct tcp_io {
 	std::span<uint8_t> read_bytes(std::chrono::milliseconds max_timeout) {
 		for (int i: range(conns.size())) {
 			if (conns[i].buffer.size()) {
+				std::cout << "got bytes\n";
 				std::span<uint8_t> data = conns[i].buffer.span();
 				conns[i].buffer.clear();
 				cur_client = i;
@@ -81,6 +82,7 @@ struct tcp_io {
 
 		for (int i: range(conns.size())) {
 			if (conns[i].buffer.size()) {
+				std::cout << "got bytes\n";
 				std::span<uint8_t> data = conns[i].buffer.span();
 				conns[i].buffer.clear();
 				cur_client = i;
@@ -90,6 +92,7 @@ struct tcp_io {
 		return {};
 	}
 	void write_bytes(std::span<uint8_t> data) {
+		std::cout << "write bytes\n" << std::endl;
 		if (cur_client == -1)
 			LogError("Missing previous read, no idae where to send to");
 		if (ERR_OK != tcp_write(conns[cur_client].client_socket, data.data(), data.size(), 0))
@@ -109,7 +112,7 @@ inline mutex& sunspec_mutex() {
 	return m;
 }
 inline ls::modbus_actor<sunspec_layout, tcp_io>& sunspec_modbus() {
-	static ls::modbus_actor<sunspec_layout, tcp_io> sunspec{0, []{ g::sunspec_mutex().lock(); }, []{ g::sunspec_mutex().unlock(); } };
+	static ls::modbus_actor<sunspec_layout, tcp_io> sunspec{1, []{ std::cout << "server locking\n"; g::sunspec_mutex().lock(); }, []{ std::cout << "server locking\n"; g::sunspec_mutex().unlock(); } };
 	return sunspec;
 }
 }

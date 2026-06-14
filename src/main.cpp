@@ -120,6 +120,13 @@ void update_meter_task(void *) {
 	}
 }
 
+void sunspec_server_task(void *) {
+	LogInfo("Sunspec server task started");
+	for (;;) {
+		g::sunspec_modbus().poll_update_state(std::chrono::milliseconds{1000});
+	}
+}
+
 // task to initailize everything and only after initialization startin all other threads
 // cyw43 init has to be done in freertos task because it utilizes freertos synchronization variables
 void startup_task(void *) {
@@ -129,12 +136,16 @@ void startup_task(void *) {
 	lwip_init();
 	wifi_storage::Default().update_hostname();
 	Webserver().start();
+	g::eastron_modbus();
+	g::sunspec_mutex();
+	g::sunspec_modbus();
 	LogInfo("Initialization done");
 
 	std::cout << "Initialization done, get all further info via the commands shown in 'help'\n";
 	board_led_set(ON);
 	xTaskCreate(usb_comm_task, "usb_comm", 512, NULL, 1, NULL);	// usb task also has to be started only after cyw43 init as some wifi functions are available
 	xTaskCreate(wifi_search_task, "UpdateWifiThread", 512, NULL, 1, NULL);
+	xTaskCreate(sunspec_server_task, "SunspecServerTask", 256, NULL, 1, NULL);
 	board_led_set(OFF);
 	update_meter_task(nullptr);
 }

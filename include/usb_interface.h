@@ -25,7 +25,7 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 	std::string command;
 	in >> command;
 	if (command.empty() || command == "h" || command == "-h" || command == "--help" || command == "help") {
-		out << "Device controlling the powerstages for a dc-dc converter\n";
+		out << "Device making a sunspec-modbus-tcp adapter for an eastron smart meter\n";
 		out << "The following commands are available to edit the state of the device:\n\n";
 		out << "  h|-h|--help|help\n";
 		out << "    Prints This help menu\n\n";

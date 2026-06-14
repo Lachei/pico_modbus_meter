@@ -30,15 +30,12 @@ struct wifi_storage {
 	static_string<64> pwd_wifi{};
 	bool hostname_inited{false};
 	bool hostname_changed{true};
-	static_string<64> hostname{"modbus-meter"};
+	static_string<64> hostname{"meter"};
 	static_string<64> mdns_service_name{"lachei_tcp_server"};
 
 	void update_hostname() {
 		if (!hostname_changed)
 			return;
-
-		if (hostname_inited && PICO_OK != persistent_storage_t::Default().write(hostname, &persistent_storage_layout::hostname))
-			LogError("Failed to store hostname");
 
 		LogInfo("Hostname change detected, adopting hostname");
 		lwip_lock();
@@ -59,7 +56,6 @@ struct wifi_storage {
 			mdns_resp_rename_netif(nif, hostname.data());
 		}
 		
-		LogInfo("Setting change to false");
 		hostname_inited = true;
 		hostname_changed = false;
 	}
@@ -123,6 +119,11 @@ struct wifi_storage {
 		persistent_storage_t::Default().read(&persistent_storage_layout::pwd_wifi, pwd_wifi);
 		hostname.sanitize();
 		hostname.make_c_str_safe();
+		if (hostname.empty()) {
+			LogInfo("Hostname empty, setting to default: meter");
+			hostname.fill("meter");
+			hostname.make_c_str_safe();
+		}
 		ssid_wifi.sanitize();
 		ssid_wifi.make_c_str_safe();
 		pwd_wifi.sanitize();

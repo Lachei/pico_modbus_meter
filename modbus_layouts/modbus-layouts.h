@@ -8,17 +8,17 @@ constexpr uint16_t modbus_swap(uint16_t v) { return (v >> 8) | ((v & 0xff) << 8)
 /**
 * Definition of the fronius sunspec-meter model with all registers needed for operation.
 */
-#pragma pack(push, 1)
+#pragma pack(push, 2)
 struct halfs_sunspec {
 	constexpr static int OFFSET = 40000;
 	std::array<char, 4> sid{'S','u','n','S'};
 	uint16_t id = modbus_swap(1);
 	uint16_t l_header = modbus_swap(65);
 	std::array<char,32> manufacturer{"Lachei"};
-	std::array<char,32> device_model{"100.100.100"};
+	std::array<char,32> device_model{"1.1.1"};
 	std::array<char,16> options{""};
 	std::array<char,16> sw_meter_version{"1.0"};
-	std::array<char,32> sn{"meter1"};
+	std::array<char,32> sn{"east2suns_1"};
 	uint16_t modbus_device_address = modbus_swap(1); // NOTE: has to be adopted
 	/* meter data*/
 	uint16_t modbus_map = modbus_swap(213);  // three phase map id
@@ -159,11 +159,11 @@ struct halfs_eastron {
 	// float total_import_active_power;
 	// float total_export_active_power;
 };
+#pragma pack(pop)
 static_assert(offsetof(halfs_eastron, line_1_to_line_2_volts) / 2 == 200);
 // static_assert(offsetof(halfs_eastron, neutral_current) / 2 == 224);
 // static_assert(offsetof(halfs_eastron, total_active_energy) / 2 == 342);
 // static_assert(offsetof(halfs_eastron, total_import_active_power) / 2 == 1280);
-#pragma pack(pop)
 
 struct sunspec_layout {
 	halfs_sunspec halfs_registers{};

@@ -24,7 +24,7 @@ struct tcp_io {
 		struct tcp_pcb* client_socket{};
 		static_vector<uint8_t, 1024> buffer{};
 	};
-	using connections = static_vector<connection, 16>;
+	using connections = static_vector<connection, 8>;
 
 	struct tcp_pcb* server_socket{};
 	connections conns{};

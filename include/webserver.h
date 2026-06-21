@@ -10,8 +10,9 @@
 #include "persistent_storage.h"
 #include "crypto_storage.h"
 #include "ntp_client.h"
+#include "sunspec_modbus.h"
 
-using tcp_server_typed = tcp_server<12, 5, 2, 0>;
+using tcp_server_typed = tcp_server<13, 5, 2, 0>;
 tcp_server_typed& Webserver() {
 	const auto static_page_callback = [] (std::string_view page, std::string_view status, std::string_view type = "text/html") {
 		return [page, status, type](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res){
@@ -73,6 +74,80 @@ tcp_server_typed& Webserver() {
 		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
 		res.res_add_header("Content-Length", "0");
 		res.res_write_body();
+	};
+	const auto get_measurements = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
+		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		res.res_add_header("Content-Type", "application/json");
+		auto length_hdr = res.res_add_header("Content-Length", "        ").value; // at max 8 chars for size
+		res.res_write_body("{"); // add header end sequence
+		ls::modbus_actor<sunspec_layout, tcp_io>& s = g::sunspec_modbus();
+		scoped_lock lock{g::sunspec_mutex()};
+		res.buffer.append_formatted( "\"neutral_volt_1\":{:.2f},"
+			      "\"neutral_volt_2\":{:.2f},"
+			      "\"neutral_volt3\":{:.2f},"
+			      "\"current_1\":{:.2f},"
+			      "\"current_2\":{:.2f},"
+			      "\"current3\":{:.2f},"
+			      "\"active_power_1\":{:.2f},"
+			      "\"active_power_2\":{:.2f},"
+			      "\"active_power3\":{:.2f},"
+			      "\"apparent_power_1\":{:.2f},"
+			      "\"apparent_power_2\":{:.2f},"
+			      "\"apparent_power3\":{:.2f},"
+			      "\"reactive_power_1\":{:.2f},"
+			      "\"reactive_power_2\":{:.2f},"
+			      "\"reactive_power3\":{:.2f},"
+			      "\"reactive_power_1\":{:.2f},"
+			      "\"reactive_power_2\":{:.2f},"
+			      "\"reactive_power3\":{:.2f},"
+			      "\"line_to_line_volt_1\":{:.2f},"
+			      "\"line_to_line_volt_2\":{:.2f},"
+			      "\"line_to_line_volt3\":{:.2f},"
+			      "\"avg_neutral_volt\":{:.2f},"
+			      "\"avg_current\":{:.2f},"
+			      "\"tot_power\":{:.2f},"
+			      "\"tot_apparent_power\":{:.2f},"
+			      "\"tot_reactive_power\":{:.2f},"
+			      "\"tot_power_factor\":{:.2f},"
+			      "\"frequency\":{:.2f},"
+			      "\"avg_line_to_line_volt\":{:.2f},"
+			      "\"tot_importet_energy\":{:.2f},"
+			      "\"to_exported_energy\":{:.2f}",
+			      s.read(&halfs_sunspec::phvpha),
+			      s.read(&halfs_sunspec::phvphb),
+			      s.read(&halfs_sunspec::phvphc),
+			      s.read(&halfs_sunspec::apha),	
+			      s.read(&halfs_sunspec::aphb),	
+			      s.read(&halfs_sunspec::aphc),
+			      s.read(&halfs_sunspec::wpha),	
+			      s.read(&halfs_sunspec::wphb),	
+			      s.read(&halfs_sunspec::wphc),
+			      s.read(&halfs_sunspec::vapha),	
+			      s.read(&halfs_sunspec::vaphb),	
+			      s.read(&halfs_sunspec::vaphc),
+			      s.read(&halfs_sunspec::varpha),	
+			      s.read(&halfs_sunspec::varphb),	
+			      s.read(&halfs_sunspec::varphc),
+			      s.read(&halfs_sunspec::pfpha),	
+			      s.read(&halfs_sunspec::pfphb),	
+			      s.read(&halfs_sunspec::pfphc),
+			      s.read(&halfs_sunspec::ppvphab),	
+			      s.read(&halfs_sunspec::ppvphbc),	
+			      s.read(&halfs_sunspec::ppvphca),
+			      s.read(&halfs_sunspec::phv),
+			      s.read(&halfs_sunspec::a),
+			      s.read(&halfs_sunspec::w),
+			      s.read(&halfs_sunspec::va),
+			      s.read(&halfs_sunspec::var),
+			      s.read(&halfs_sunspec::pf),
+			      s.read(&halfs_sunspec::hz),
+			      s.read(&halfs_sunspec::ppv),
+			      s.read(&halfs_sunspec::totwhimp),
+			      s.read(&halfs_sunspec::totwhexp));
+		res.res_write_body("}");
+		if (0 == format_to_sv(length_hdr, "{}", res.body.size()))
+			LogError("Failed to write header length");
 	};
 	const auto get_logs = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
@@ -200,6 +275,8 @@ tcp_server_typed& Webserver() {
 		.port = 80,
 		.default_endpoint_cb = static_page_callback(_404_HTML, STATUS_NOT_FOUND),
 		.get_endpoints = {
+			// meter endpoints
+			tcp_server_typed::endpoint{{.path_match = true}, "/measurements", get_measurements},
 			// interactive endpoints
 			tcp_server_typed::endpoint{{.path_match = true}, "/logs", get_logs},
 			tcp_server_typed::endpoint{{.path_match = true}, "/discovered_wifis", get_discovered_wifis},

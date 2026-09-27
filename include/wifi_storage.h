@@ -172,7 +172,9 @@ struct wifi_storage {
 };
 
 std::ostream& operator<<(std::ostream &os, const wifi_storage &w) {
+	struct netif* nif = get_netif();
 	os << "Wifi connected: " << (w.wifi_connected ? "true": "false") << '\n';
+	os << "Ip: " << ip4addr_ntoa(netif_ip4_addr(nif)) << '\n';
 	os << "Stored wifi ssid: " << w.ssid_wifi.sv() << '\n';
 	os << "hostname: " << w.hostname.sv() << '\n';
 	os << "mdns_service_name: " << w.mdns_service_name.sv() << '\n';

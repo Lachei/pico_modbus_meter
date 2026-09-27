@@ -12,7 +12,7 @@
 #include "ntp_client.h"
 #include "sunspec_modbus.h"
 
-using tcp_server_typed = tcp_server<13, 5, 2, 0>;
+using tcp_server_typed = tcp_server<14, 6, 2, 0>;
 tcp_server_typed& Webserver() {
 	const auto static_page_callback = [] (std::string_view page, std::string_view status, std::string_view type = "text/html") {
 		return [page, status, type](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res){
@@ -149,6 +149,28 @@ tcp_server_typed& Webserver() {
 		if (0 == format_to_sv(length_hdr, "{}", res.body.size()))
 			LogError("Failed to write header length");
 	};
+	const auto get_modbus_id = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
+		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		res.res_add_header("Content-Type", "text/plain");
+		std::string_view modbus_id = static_format<4>("{}", g::sunspec_modbus().addr);
+		std::string_view modbus_id_size = static_format<2>("{}", modbus_id.size());
+		res.res_add_header("Content-Length", modbus_id_size);
+		res.res_write_body(modbus_id);
+	};
+	const auto set_modbus_id = [&get_modbus_id] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		int modbus_id;
+		char *end = (char*)req.body.end();
+		modbus_id = std::strtol(req.body.data(), &end, 10);
+		if (modbus_id < 1 || modbus_id > 255)
+			LogError("Modbus id out of range 1-255: {}", req.body);
+		else {
+			g::sunspec_modbus().addr = modbus_id;
+			if (PICO_OK != persistent_storage_t::Default().write(g::sunspec_modbus().addr, &persistent_storage_layout::modbus_id))
+				LogError("Failed to permanently store modbus id");
+		}
+		get_modbus_id(req, res);
+	};
 	const auto get_logs = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
 		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
@@ -277,6 +299,7 @@ tcp_server_typed& Webserver() {
 		.get_endpoints = {
 			// meter endpoints
 			tcp_server_typed::endpoint{{.path_match = true}, "/measurements", get_measurements},
+			tcp_server_typed::endpoint{{.path_match = true}, "/modbus_id", get_modbus_id},
 			// interactive endpoints
 			tcp_server_typed::endpoint{{.path_match = true}, "/logs", get_logs},
 			tcp_server_typed::endpoint{{.path_match = true}, "/discovered_wifis", get_discovered_wifis},
@@ -295,6 +318,7 @@ tcp_server_typed& Webserver() {
 			tcp_server_typed::endpoint{{.path_match = true}, "/settings.html", static_page_callback(SETTINGS_HTML, STATUS_OK)},
 		},
 		.post_endpoints = {
+			tcp_server_typed::endpoint{{.path_match = true}, "/modbus_id", set_modbus_id},
 			tcp_server_typed::endpoint{{.path_match = true}, "/set_log_level", set_log_level},
 			tcp_server_typed::endpoint{{.path_match = true}, "/host_name", set_hostname},
 			tcp_server_typed::endpoint{{.path_match = true}, "/ap_active", set_ap_active},

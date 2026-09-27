@@ -74,12 +74,15 @@ void update_meter_task(void *) {
 	for (;;) {
 		int ms_s = time_us_64() / 1000;
 		// fetch values
-		e.read_remote(1, &halfs_eastron::phase_1_neutral_volts, &halfs_eastron::export_active_energy);
-		e.read_remote(1, &halfs_eastron::line_1_to_line_2_volts, &halfs_eastron::average_line_to_line_volts);
+		std::string_view res1 = e.read_remote(1, &halfs_eastron::phase_1_neutral_volts, &halfs_eastron::export_active_energy);
+		std::string_view res2 = e.read_remote(1, &halfs_eastron::line_1_to_line_2_volts, &halfs_eastron::average_line_to_line_volts);
+		if (res1 != libmodbus_static::OK || res2 != libmodbus_static::OK)
+			LogError("Failed to read eastron: {}, {}", res1, res2);
 
 		// write to sunspec modbus
 		{
 			scoped_lock lock{g::sunspec_mutex()};
+			s.write(uint16_t(s.addr), &halfs_sunspec::modbus_device_address);
 			s.write(e.read(&halfs_eastron::phase_1_neutral_volts), 	&halfs_sunspec::phvpha);
 			s.write(e.read(&halfs_eastron::phase_2_neutral_volts), 	&halfs_sunspec::phvphb);
 			s.write(e.read(&halfs_eastron::phase_3_neutral_volts), 	&halfs_sunspec::phvphc);
@@ -123,7 +126,9 @@ void update_meter_task(void *) {
 void sunspec_server_task(void *) {
 	LogInfo("Sunspec server task started");
 	for (;;) {
-		g::sunspec_modbus().poll_update_state(std::chrono::milliseconds{1000});
+		std::string_view res = g::sunspec_modbus().poll_update_state(std::chrono::milliseconds{1000});
+		if (res != libmodbus_static::OK && res != libmodbus_static::IN_PROGRESS)
+			LogInfo("Sunspec polling reports: {}", res);
 	}
 }
 
@@ -138,7 +143,7 @@ void startup_task(void *) {
 	Webserver().start();
 	g::eastron_modbus();
 	g::sunspec_mutex();
-	g::sunspec_modbus();
+	persistent_storage_t::Default().read(&persistent_storage_layout::modbus_id, g::sunspec_modbus().addr);
 	LogInfo("Initialization done");
 
 	std::cout << "Initialization done, get all further info via the commands shown in 'help'\n";

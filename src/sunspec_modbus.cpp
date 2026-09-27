@@ -15,14 +15,14 @@ err_t tcp_server_accept (void *arg, struct tcp_pcb *client_pcb, err_t err) {
 	tcp_io &io = *(tcp_io*)arg;
 
 	if (!io.conns.push({.client_socket = client_pcb})) {
-		LogError("No free client spot");
+		LogError("Modbus server no free client spot");
 		return tcp_server_result(nullptr, ERR_ABRT, client_pcb);
 	}
-	
+
 	tcp_arg(client_pcb, arg);
 	tcp_sent(client_pcb, tcp_server_sent);
 	tcp_recv(client_pcb, tcp_server_recv);
-	tcp_poll(client_pcb, tcp_server_poll, 5 * 2);
+	tcp_poll(client_pcb, tcp_server_poll, 1 * 2);
 	tcp_err(client_pcb, tcp_server_err);
 
 	LogInfo("Sunspec modbus client connected");
@@ -32,8 +32,8 @@ err_t tcp_server_accept (void *arg, struct tcp_pcb *client_pcb, err_t err) {
 
 err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
 	if (!p || !arg) {
-		LogError("tcp_server_recv() failed");
-		return tcp_server_result(arg, -1, tpcb);
+		LogError("Modbus tcp_server_recv() failed");
+		return tcp_server_result(arg, -11, tpcb);
 	}
 	tcp_io &io = *(tcp_io*)arg;
 	tcp_io::connection *c = io.conns | find{&tcp_io::connection::client_socket, tpcb};
@@ -54,14 +54,8 @@ err_t tcp_server_sent(void *arg, struct tcp_pcb *tpcb, u16_t len) {
 
 err_t tcp_server_poll(void *arg, struct tcp_pcb *tpcb) {
 	tcp_io &io = *(tcp_io*)arg;
-	tcp_io::connection *c = io.conns | find{&tcp_io::connection::client_socket, tpcb};
-	err_t err = tcp_server_result(arg, -1, tpcb);
-	if (!c) {
-		LogError("Couldnt find connection with client socket");
-		return err;
-	}
-	*c = *io.conns.pop();
-	return err;
+	LogInfo("Modbus server, poll");
+	return tcp_server_result(arg, -1, tpcb);
 }
 
 void tcp_server_err(void *arg, err_t err) {
@@ -74,11 +68,12 @@ void tcp_server_err(void *arg, err_t err) {
 }
 
 err_t tcp_server_result(void *arg, int status, struct tcp_pcb *&client) {
-	if (status == 0) {
-		LogInfo("Server success");
-		return ERR_OK;
-	}
-	LogWarning("Server failed {}, deinitializing {}", status, client ? "one client": "no client");
+	tcp_io &io = *(tcp_io*)arg;
+	LogInfo("Modbus server result {}, deinitializing {}", status, client ? "one client": "no client");
+
+	tcp_io::connection *c = io.conns | find{&tcp_io::connection::client_socket, client};
+	if (c)
+		*c = *io.conns.pop();
 
 	tcp_arg(client, NULL);
 	tcp_poll(client, NULL, 0);

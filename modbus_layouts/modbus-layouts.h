@@ -16,7 +16,7 @@ struct halfs_sunspec {
 	uint16_t l_header = modbus_swap(65);
 	std::array<char,32> manufacturer{"Lachei"};
 	std::array<char,32> device_model{"1.1.1"};
-	std::array<char,16> options{""};
+	std::array<char,16> options{"iwos"};
 	std::array<char,16> sw_meter_version{"1.0"};
 	std::array<char,32> sn{"east2suns_1"};
 	uint16_t modbus_device_address = modbus_swap(1); // NOTE: has to be adopted

@@ -58,7 +58,7 @@ extern "C" {
 
 extern uint8_t mac[6];
 
-static std::array<uint8_t, 1500> pack;
+static std::array<uint8_t, 1600> pack;
 
 inline struct netif* get_netif() {
 	static struct netif g_netif;
@@ -72,11 +72,13 @@ void wiznet_poll_task(void*) {
 
 		if (pack_len == 0)
 			continue;
-		pack_len = recv_lwip(0, pack.data(), pack_len);
+		pack_len = recv_lwip(0, pack.data(), pack.size());
 		if (pack_len == 0)
 			continue;
 
 		struct pbuf* p = pbuf_alloc(PBUF_RAW, pack_len, PBUF_POOL);
+		if (!p)
+			continue;
 		pbuf_take(p, pack.data(), pack_len);
 		if (!p)
 			continue;

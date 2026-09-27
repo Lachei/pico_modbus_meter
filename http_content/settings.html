@@ -1,19 +1,30 @@
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"></head>
-<body>
-<h3>Einstellungen</h3>
-<h4>Passwort ändern</h4>
-<p><input id="pw1" type="password"><label for="pw1">Passwort eingeben</label>
-<p><input id="pw2" type="password"><label for="pw2">Passwort wiederholen</label>
-<p><button onclick="sp();">Passwort ändern</button>
-<p><pre id="e" class="er d">Passwörter nicht gleich</pre>
-</body>
-<script>
+	<head><meta charset="utf-8"></head>
+	<body>
+		<h3>Einstellungen</h3>
+		<p><input id="modbus_id" value="1" min="1" max="255" type="number" step="1" onchange="set_modbus_id(this.value);"><label for="modbus_id">Modbus id (1 - 255)</label>
+		<h4>Passwort ändern</h4>
+		<p><input id="pw1" type="password"><label for="pw1">Passwort eingeben</label>
+		<p><input id="pw2" type="password"><label for="pw2">Passwort wiederholen</label>
+		<p><button onclick="sp();">Passwort ändern</button>
+		<p><pre id="e" class="er d">Passwörter nicht gleich</pre>
+	</body>
+	<script>
 var d=document;
 var pw1=d.getElementById("pw1");
 var pw2=d.getElementById("pw2");
 var e=d.getElementById("e");
 const sp=async()=>{if(pw1.value!=pw2.value)e.classList.remove("d");else {e.classList.add("d");await fetch("set_password",{method:"PUT",body:pw1.value});pw1.value=pw2.value="";}};
-</script>
+async function set_modbus_id(id) {
+	let t = await fetch("modbus_id", {method:"POST", body:id});
+	t = await t.text();
+	modbus_id.value = t;
+}
+window.onload = async () => {
+	let t = await fetch("modbus_id");
+	t = await t.text();
+	modbus_id.value = t;
+}
+	</script>
 </html>

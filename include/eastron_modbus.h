@@ -32,6 +32,7 @@ struct rtu_io {
 	}
 	std::span<uint8_t> read_bytes(std::chrono::milliseconds max_timeout) {
 		receive_buffer.clear();
+		auto start = std::chrono::steady_clock::now();
 		while (uart_is_readable(uart))
 			receive_buffer.push(uart_getc(uart)) ;
 		return receive_buffer.span();

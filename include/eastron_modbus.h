@@ -7,13 +7,16 @@
 
 #include <log_storage.h>
 
+#include "FreeRTOS.h"
+
 namespace ls = libmodbus_static;
 
 struct rtu_io {
+	using ms = std::chrono::milliseconds;
 	static constexpr ls::transport_t TRANSPORT_TYPE{ls::transport_t::RTU};
 
-	const int rx_pin{0};
-	const int tx_pin{1};
+	const int rx_pin{1};
+	const int tx_pin{0};
 	const int send_enable_pin{2};
 	const int baudrate{9600};
 	uart_inst_t *const uart{uart0};
@@ -30,17 +33,31 @@ struct rtu_io {
 	}
 	void deinit() {
 	}
-	std::span<uint8_t> read_bytes(std::chrono::milliseconds max_timeout) {
+	std::span<uint8_t> read_bytes(ms max_timeout) {
+		const auto now = []{ return time_us_64() / 1000; };
 		receive_buffer.clear();
-		auto start = std::chrono::steady_clock::now();
-		while (uart_is_readable(uart))
-			receive_buffer.push(uart_getc(uart)) ;
+		uint32_t start = now();
+		std::optional<uint32_t> last_package_received{};
+		for (uint32_t cur = now();
+			cur - start < max_timeout.count() &&
+			(!last_package_received.has_value() || cur - last_package_received.value() <= 1'000. / baudrate * 40 )
+			; cur = now()) {
+			while (uart_is_readable(uart)) {
+				receive_buffer.push(uart_getc(uart)) ;
+				last_package_received = now();
+			}
+			vTaskDelay(pdMS_TO_TICKS(1));
+		}
+		if (receive_buffer.size())
+			LogInfo("R({}): {}", receive_buffer.size(), receive_buffer.span().subspan(0, 10));
 		return receive_buffer.span();
 	}
 	void write_bytes(std::span<uint8_t> data) {
+		if (data.size() >= 6)
+			LogInfo("R({}): {}", data.size(), data.subspan(0, 6));
 		gpio_put(send_enable_pin, 1);
-		for (uint8_t d: data)
-			uart_putc_raw(uart, d);
+		uart_write_blocking(uart, data.data(), data.size());
+		uart_tx_wait_blocking(uart);
 		gpio_put(send_enable_pin, 0);
 	}
 	ls::result get_status() const {

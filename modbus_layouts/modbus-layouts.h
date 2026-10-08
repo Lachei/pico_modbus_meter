@@ -169,7 +169,7 @@ struct sunspec_layout {
 	halfs_sunspec halfs_registers{};
 };
 struct eastron_layout {
-	halfs_eastron halfs_registers{};
+	halfs_eastron halfs_write_registers{};
 };
 
 

@@ -32,7 +32,7 @@ struct log_storage {
 	constexpr log_entry* push(log_severity severity, std::string_view static_message = {}) noexcept {
 		if (severity < cur_severity)
 			return {};
-		if (print_to_cout)
+		if (print_to_cout && static_message.size())
 			std::cout << static_message << std::endl;
 		log_entry *entry = logs.push();
 		if (!entry)
@@ -73,7 +73,8 @@ inline void LogInfo(std::format_string<Args...> fmt, Args&&... args) {
 	auto *entry = log_storage::Default().push(log_severity::Info); 
 	if (entry) {
 		entry->message.fill_formatted(fmt, std::forward<Args>(args)...);
-		//std::println("[Info   ]: {}", entry->message.view);
+		if (log_storage::Default().print_to_cout)
+			std::cout <<  entry->message.sv() << std::endl;
 	}
 }
 template<typename... Args>
@@ -81,7 +82,8 @@ inline void LogWarning(std::format_string<Args...> fmt, Args&&... args) {
 	auto *entry = log_storage::Default().push(log_severity::Warning); 
 	if (entry) {
 		entry->message.fill_formatted(fmt, std::forward<Args>(args)...);
-		//std::println("[Warning]: {}", entry->message.view);
+		if (log_storage::Default().print_to_cout)
+			std::cout <<  entry->message.sv() << std::endl;
 	}
 }
 template<typename... Args>
@@ -89,7 +91,8 @@ inline void LogError(std::format_string<Args...> fmt, Args&&... args) {
 	auto *entry = log_storage::Default().push(log_severity::Error); 
 	if (entry) {
 		entry->message.fill_formatted(fmt, std::forward<Args>(args)...);
-		//std::println("[Error  ]: {}", entry->message.view);
+		if (log_storage::Default().print_to_cout)
+			std::cout <<  entry->message.sv() << std::endl;
 	}
 }
 template<typename... Args>
@@ -97,7 +100,8 @@ inline void LogFatal(std::format_string<Args...> fmt, Args&&... args) {
 	auto *entry = log_storage::Default().push(log_severity::Fatal); 
 	if (entry) {
 		entry->message.fill_formatted(fmt, std::forward<Args>(args)...);
-		//std::println("[Fatal  ]: {}", entry->message.view);
+		if (log_storage::Default().print_to_cout)
+			std::cout <<  entry->message.sv() << std::endl;
 	}
 }
 

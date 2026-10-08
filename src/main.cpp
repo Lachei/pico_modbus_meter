@@ -78,8 +78,7 @@ void update_meter_task(void *) {
 		// fetch values
 		std::string_view res1 = e.read_remote(1, &halfs_eastron::phase_1_neutral_volts, &halfs_eastron::export_active_energy, 1'000ms);
 		std::string_view res2 = e.read_remote(1, &halfs_eastron::line_1_to_line_2_volts, &halfs_eastron::average_line_to_line_volts, 1'000ms);
-		if (res1 != libmodbus_static::OK || res2 != libmodbus_static::OK)
-			LogError("Failed to read eastron: {}, {}", res1, res2);
+		LogInfo("Readouts finished with: {}, {}", res1, res2);
 
 		// write to sunspec modbus
 		{
@@ -128,7 +127,7 @@ void update_meter_task(void *) {
 void sunspec_server_task(void *) {
 	LogInfo("Sunspec server task started");
 	for (;;) {
-		std::string_view res = g::sunspec_modbus().poll_update_state(std::chrono::milliseconds{1000});
+		std::string_view res = g::sunspec_modbus().poll_update_state(1000ms);
 		if (res != libmodbus_static::OK && res != libmodbus_static::IN_PROGRESS)
 			LogInfo("Sunspec polling reports: {}", res);
 	}

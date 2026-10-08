@@ -79,6 +79,7 @@ void update_meter_task(void *) {
 		std::string_view res1 = e.read_remote(1, &halfs_eastron::phase_1_neutral_volts, &halfs_eastron::export_active_energy, 1'000ms);
 		std::string_view res2 = e.read_remote(1, &halfs_eastron::line_1_to_line_2_volts, &halfs_eastron::average_line_to_line_volts, 1'000ms);
 		LogInfo("Readouts finished with: {}, {}", res1, res2);
+		float f_watts = g::invert_watts() ? -1.f: 1.f;
 
 		// write to sunspec modbus
 		{
@@ -106,9 +107,9 @@ void update_meter_task(void *) {
 			s.write(e.read(&halfs_eastron::line_2_to_line_3_volts), &halfs_sunspec::ppvphbc);
 			s.write(e.read(&halfs_eastron::line_3_to_line_1_volts), &halfs_sunspec::ppvphca);
 
-			s.write(e.read(&halfs_eastron::average_line_to_neutral_volts), &halfs_sunspec::phv);
+			s.write(e.read(&halfs_eastron::average_line_to_neutral_volts), 	&halfs_sunspec::phv);
 			s.write(e.read(&halfs_eastron::average_line_current), 		&halfs_sunspec::a);
-			s.write(e.read(&halfs_eastron::total_system_power), 		&halfs_sunspec::w);
+			s.write(e.read(&halfs_eastron::total_system_power) * f_watts, 	&halfs_sunspec::w);
 			s.write(e.read(&halfs_eastron::total_system_volt_amps), 	&halfs_sunspec::va);
 			s.write(e.read(&halfs_eastron::total_system_VAr), 		&halfs_sunspec::var);
 			s.write(e.read(&halfs_eastron::total_system_power_factor), 	&halfs_sunspec::pf);

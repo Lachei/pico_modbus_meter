@@ -48,13 +48,9 @@ struct rtu_io {
 			}
 			vTaskDelay(pdMS_TO_TICKS(1));
 		}
-		if (receive_buffer.size())
-			LogInfo("R({}): {}", receive_buffer.size(), receive_buffer.span().subspan(0, 10));
 		return receive_buffer.span();
 	}
 	void write_bytes(std::span<uint8_t> data) {
-		if (data.size() >= 6)
-			LogInfo("R({}): {}", data.size(), data.subspan(0, 6));
 		gpio_put(send_enable_pin, 1);
 		uart_write_blocking(uart, data.data(), data.size());
 		uart_tx_wait_blocking(uart);

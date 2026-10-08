@@ -12,7 +12,7 @@
 #include "ntp_client.h"
 #include "sunspec_modbus.h"
 
-using tcp_server_typed = tcp_server<14, 6, 2, 0>;
+using tcp_server_typed = tcp_server<15, 7, 2, 0>;
 tcp_server_typed& Webserver() {
 	const auto static_page_callback = [] (std::string_view page, std::string_view status, std::string_view type = "text/html") {
 		return [page, status, type](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res){
@@ -171,6 +171,29 @@ tcp_server_typed& Webserver() {
 		}
 		get_modbus_id(req, res);
 	};
+	const auto get_invert_watts = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
+		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		res.res_add_header("Content-Type", "text/plain");
+		std::string_view invert = g::invert_watts() ? "true": "false";
+		std::string_view invert_size = static_format<2>("{}", invert.size());
+		res.res_add_header("Content-Length", invert_size);
+		res.res_write_body(invert);
+	};
+	const auto set_invert_watts = [&get_invert_watts] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		std::optional<bool> i{};
+		if (req.body == "true")
+			i = true;
+		else if (req.body == "false")
+			i = false;
+		if (i) {
+			g::invert_watts() = i.value();
+			if (PICO_OK != persistent_storage_t::Default().write(i.value(), &persistent_storage_layout::invert_watts))
+				LogError("Failed to permanently store modbus id");
+		} else 
+			LogError("Bad value to set: {}", req.body);
+		get_invert_watts(req, res);
+	};
 	const auto get_logs = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
 		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
@@ -300,6 +323,7 @@ tcp_server_typed& Webserver() {
 			// meter endpoints
 			tcp_server_typed::endpoint{{.path_match = true}, "/measurements", get_measurements},
 			tcp_server_typed::endpoint{{.path_match = true}, "/modbus_id", get_modbus_id},
+			tcp_server_typed::endpoint{{.path_match = true}, "/invert_watts", get_invert_watts},
 			// interactive endpoints
 			tcp_server_typed::endpoint{{.path_match = true}, "/logs", get_logs},
 			tcp_server_typed::endpoint{{.path_match = true}, "/discovered_wifis", get_discovered_wifis},
@@ -319,6 +343,7 @@ tcp_server_typed& Webserver() {
 		},
 		.post_endpoints = {
 			tcp_server_typed::endpoint{{.path_match = true}, "/modbus_id", set_modbus_id},
+			tcp_server_typed::endpoint{{.path_match = true}, "/invert_watts", set_invert_watts},
 			tcp_server_typed::endpoint{{.path_match = true}, "/set_log_level", set_log_level},
 			tcp_server_typed::endpoint{{.path_match = true}, "/host_name", set_hostname},
 			tcp_server_typed::endpoint{{.path_match = true}, "/ap_active", set_ap_active},

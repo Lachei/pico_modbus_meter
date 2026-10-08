@@ -112,5 +112,9 @@ inline ls::modbus_actor<sunspec_layout, tcp_io>& sunspec_modbus() {
 	static ls::modbus_actor<sunspec_layout, tcp_io> sunspec{1, []{ g::sunspec_mutex().lock(); }, []{ g::sunspec_mutex().unlock(); } };
 	return sunspec;
 }
+inline bool& invert_watts() {
+	static bool invert_watts{};
+	return invert_watts;
+}
 }
 

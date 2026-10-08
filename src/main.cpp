@@ -145,6 +145,7 @@ void startup_task(void *) {
 	g::eastron_modbus();
 	g::sunspec_mutex();
 	persistent_storage_t::Default().read(&persistent_storage_layout::modbus_id, g::sunspec_modbus().addr);
+	persistent_storage_t::Default().read(&persistent_storage_layout::invert_watts, g::invert_watts());
 	LogInfo("Initialization done");
 
 	std::cout << "Initialization done, get all further info via the commands shown in 'help'\n";

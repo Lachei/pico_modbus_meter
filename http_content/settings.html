@@ -4,6 +4,7 @@
 	<body>
 		<h3>Einstellungen</h3>
 		<p><input id="modbus_id" value="1" min="1" max="255" type="number" step="1" onchange="set_modbus_id(this.value);"><label for="modbus_id">Modbus id (1 - 255)</label>
+		<p><input id="invert_watts" type="checkbox" onchange="set_invert_watts();"><label for="invert_watts">Watt invertieren (falls zb. das smart meter falsch herum eingebaut ist)</label>
 		<h4>Passwort ändern</h4>
 		<p><input id="pw1" type="password"><label for="pw1">Passwort eingeben</label>
 		<p><input id="pw2" type="password"><label for="pw2">Passwort wiederholen</label>
@@ -21,10 +22,18 @@ async function set_modbus_id(id) {
 	t = await t.text();
 	modbus_id.value = t;
 }
+async function set_invert_watts() {
+	let t = await fetch("invert_watts", {method:"POST", body:(invert_watts.checked?"true":"false")});
+	t = await t.text();
+	invert_watts.checked = t === "true";
+}
 window.onload = async () => {
 	let t = await fetch("modbus_id");
 	t = await t.text();
 	modbus_id.value = t;
+	t = await fetch("invert_watts");
+	t = await t.text();
+	invert_watts.checked = t === "true";
 }
 	</script>
 </html>
